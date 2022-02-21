@@ -1,0 +1,34 @@
+{
+    "dataRoles": [
+        {
+            "displayName": "Summary Row fields",
+            "name": "summaryRow",
+            "kind": "Grouping"
+        },
+        {
+            "displayName": "Detail Row HTML",
+            "name": "detailHTML",
+            "kind": "Grouping"
+        }
+    ],
+    "dataViewMappings": [
+        {
+            "table": {
+                "rows": {
+                    "select": [
+                        {
+                            "for": {
+                                "in": "summaryRow"
+                            }
+                        },
+                        {
+                            "for": {
+                                "in": "detailHTML"
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+    ]
+}
