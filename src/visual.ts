@@ -11,6 +11,9 @@ import IVisualHost = powerbi.extensibility.IVisualHost;
 import VisualConstructorOptions = powerbi.extensibility.visual.VisualConstructorOptions;
 import VisualUpdateOptions = powerbi.extensibility.visual.VisualUpdateOptions;
 
+import { valueFormatter } from 'powerbi-visuals-utils-formattingutils';
+let iValueFormatter = valueFormatter.create({});
+
 import { v4 as uuidv4 } from 'uuid';
 
 export class Visual implements IVisual {
@@ -42,39 +45,42 @@ export class Visual implements IVisual {
     console.log('transformedData', transformedData);
 
     //draw headers
+    let sortedSummaryRowColumns = [...transformedData.summaryRowColumns].sort(
+      (a: any, b: any) => a.rolesIndex.summaryRowColumn[0] - b.rolesIndex.summaryRowColumn[0]
+    );
     const tableHeader = document.createElement('th');
-    transformedData.summaryRowColumns.forEach((column) => {
+    sortedSummaryRowColumns.forEach((column) => {
       const tableHeaderColumn = document.createElement('td');
       tableHeaderColumn.innerText = column.displayName;
       tableHeader.appendChild(tableHeaderColumn);
     });
     this.table.appendChild(tableHeader);
 
-    // //draw rows
-    // transformedData.summaryRowData.forEach((row: DataViewTableRow, index) => {
-    //   const summaryRow = document.createElement('tr');
-    //   let rowId = uuidv4();
-    //   summaryRow.setAttribute('rowId', rowId);
-    //   row.forEach((columnValue: PrimitiveValue) => {
-    //     const cell = document.createElement('td');
-    //     cell.innerText = columnValue.toString();
-    //     summaryRow.appendChild(cell);
-    //   });
-    //   this.table.appendChild(summaryRow);
+    //draw rows
+    transformedData.summaryRows.forEach((row: DataViewTableRow, index) => {
+      const summaryRow = document.createElement('tr');
+      let rowId = uuidv4();
+      summaryRow.setAttribute('rowId', rowId);
+      transformedData.summaryRowColumns.forEach((column) => {
+        const cell = document.createElement('td');
+        cell.innerText = row[column.displayName.replace(new RegExp(' ', 'g'), '_').toLocaleLowerCase()].toString();
+        summaryRow.appendChild(cell);
+      });
+      this.table.appendChild(summaryRow);
 
-    //   if (transformedData.detailRowData[index]) {
-    //     summaryRow.onclick = () => toggleRow(rowId);
+      if (transformedData.detailRows[index]) {
+        summaryRow.onclick = () => toggleRow(rowId);
 
-    //     const detailRow = document.createElement('tr');
-    //     const detailCell = document.createElement('td');
-    //     detailCell.colSpan = transformedData.headings.length;
-    //     detailCell.innerHTML = transformedData.detailRowData[index].toString();
-    //     detailRow.appendChild(detailCell);
-    //     detailRow.classList.add('hide-row', 'detail-row');
-    //     detailRow.setAttribute('id', rowId);
-    //     this.table.appendChild(detailRow);
-    //   }
-    // });
+        const detailRow = document.createElement('tr');
+        const detailCell = document.createElement('td');
+        detailCell.colSpan = transformedData.summaryRowColumns.length;
+        detailCell.innerHTML = transformedData.detailRows[index].toString();
+        detailRow.appendChild(detailCell);
+        detailRow.classList.add('hide-row', 'detail-row');
+        detailRow.setAttribute('id', rowId);
+        this.table.appendChild(detailRow);
+      }
+    });
 
     const toggleRow = (rowId: string) => {
       const row = document.getElementById(rowId);
@@ -83,6 +89,8 @@ export class Visual implements IVisual {
   }
 
   private transformData(data: powerbi.DataViewTable) {
+    console.log('data', data);
+
     let summaryRowColumns = data.columns.filter((c) => c.roles.summaryRowColumn);
     console.log('summaryRowColumns', summaryRowColumns);
 
@@ -95,11 +103,16 @@ export class Visual implements IVisual {
     let summaryRows = [];
     summaryRowData.forEach((row) => {
       let rowObject = {};
-      let sortedSummaryRowColumns = summaryRowColumns.sort(
-        (a: any, b: any) => a.rolesIndex.summaryRowColumn[0] - b.rolesIndex.summaryRowColumn[0]
-      );
-      sortedSummaryRowColumns.forEach((column) => {
-        rowObject[column.displayName] = row[column.index];
+
+      summaryRowColumns.forEach((column: any, index) => {
+        if (column.format !== 'D') {
+          rowObject[column.displayName.replace(new RegExp(' ', 'g'), '_').toLocaleLowerCase()] =
+            row[column.rolesIndex.summaryRowColumn[0]];
+        } else {
+          rowObject[column.displayName.replace(new RegExp(' ', 'g'), '_').toLocaleLowerCase()] = iValueFormatter.format(
+            row[index]
+          );
+        }
       });
 
       summaryRows.push(rowObject);
