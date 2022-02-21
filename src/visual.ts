@@ -39,41 +39,42 @@ export class Visual implements IVisual {
     }
 
     const transformedData = this.transformData(tableDataView);
+    console.log('transformedData', transformedData);
 
     //draw headers
     const tableHeader = document.createElement('th');
-    transformedData.headings.forEach((column: DataViewMetadataColumn) => {
+    transformedData.summaryRowColumns.forEach((column) => {
       const tableHeaderColumn = document.createElement('td');
       tableHeaderColumn.innerText = column.displayName;
       tableHeader.appendChild(tableHeaderColumn);
     });
     this.table.appendChild(tableHeader);
 
-    //draw rows
-    transformedData.summaryRowData.forEach((row: DataViewTableRow, index) => {
-      const summaryRow = document.createElement('tr');
-      let rowId = uuidv4();
-      summaryRow.setAttribute('rowId', rowId);
-      row.forEach((columnValue: PrimitiveValue) => {
-        const cell = document.createElement('td');
-        cell.innerText = columnValue.toString();
-        summaryRow.appendChild(cell);
-      });
-      this.table.appendChild(summaryRow);
+    // //draw rows
+    // transformedData.summaryRowData.forEach((row: DataViewTableRow, index) => {
+    //   const summaryRow = document.createElement('tr');
+    //   let rowId = uuidv4();
+    //   summaryRow.setAttribute('rowId', rowId);
+    //   row.forEach((columnValue: PrimitiveValue) => {
+    //     const cell = document.createElement('td');
+    //     cell.innerText = columnValue.toString();
+    //     summaryRow.appendChild(cell);
+    //   });
+    //   this.table.appendChild(summaryRow);
 
-      if (transformedData.detailRowData[index]) {
-        summaryRow.onclick = () => toggleRow(rowId);
+    //   if (transformedData.detailRowData[index]) {
+    //     summaryRow.onclick = () => toggleRow(rowId);
 
-        const detailRow = document.createElement('tr');
-        const detailCell = document.createElement('td');
-        detailCell.colSpan = transformedData.headings.length;
-        detailCell.innerHTML = transformedData.detailRowData[index].toString();
-        detailRow.appendChild(detailCell);
-        detailRow.classList.add('hide-row', 'detail-row');
-        detailRow.setAttribute('id', rowId);
-        this.table.appendChild(detailRow);
-      }
-    });
+    //     const detailRow = document.createElement('tr');
+    //     const detailCell = document.createElement('td');
+    //     detailCell.colSpan = transformedData.headings.length;
+    //     detailCell.innerHTML = transformedData.detailRowData[index].toString();
+    //     detailRow.appendChild(detailCell);
+    //     detailRow.classList.add('hide-row', 'detail-row');
+    //     detailRow.setAttribute('id', rowId);
+    //     this.table.appendChild(detailRow);
+    //   }
+    // });
 
     const toggleRow = (rowId: string) => {
       const row = document.getElementById(rowId);
@@ -82,7 +83,8 @@ export class Visual implements IVisual {
   }
 
   private transformData(data: powerbi.DataViewTable) {
-    let headings = data.columns.filter((c) => c.roles.summaryRow);
+    let summaryRowColumns = data.columns.filter((c) => c.roles.summaryRowColumn);
+    console.log('summaryRowColumns', summaryRowColumns);
 
     let detailRowMeta = data.columns.filter((c) => c.roles.detailHTML)[0];
 
@@ -90,15 +92,23 @@ export class Visual implements IVisual {
       return [...row.slice(0, detailRowMeta.index), ...row.slice(detailRowMeta.index + 1)];
     });
 
-    let detailRowData = data.rows.map((row) => {
-      return row[detailRowMeta.index];
+    let summaryRows = [];
+    summaryRowData.forEach((row) => {
+      let rowObject = {};
+      let sortedSummaryRowColumns = summaryRowColumns.sort(
+        (a: any, b: any) => a.rolesIndex.summaryRowColumn[0] - b.rolesIndex.summaryRowColumn[0]
+      );
+      sortedSummaryRowColumns.forEach((column) => {
+        rowObject[column.displayName] = row[column.index];
+      });
+
+      summaryRows.push(rowObject);
     });
 
     return {
-      headings: headings,
-      summaryRowData: summaryRowData,
-      detailRowMeta: detailRowMeta,
-      detailRowData: detailRowData,
+      summaryRowColumns: summaryRowColumns,
+      summaryRows: summaryRows,
+      detailRows: data.rows.map((row) => row[detailRowMeta.index]),
     };
   }
 }

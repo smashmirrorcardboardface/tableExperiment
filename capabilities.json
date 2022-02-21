@@ -2,7 +2,7 @@
     "dataRoles": [
         {
             "displayName": "Summary Row fields",
-            "name": "summaryRow",
+            "name": "summaryRowColumn",
             "kind": "Grouping"
         },
         {
@@ -18,7 +18,7 @@
                     "select": [
                         {
                             "for": {
-                                "in": "summaryRow"
+                                "in": "summaryRowColumn"
                             }
                         },
                         {
